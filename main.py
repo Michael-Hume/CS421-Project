@@ -37,36 +37,8 @@ sentences1_2 = ["Is Rome the capital of Italy?",
 
 for sentence in testSentence:
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
-    print("Sentence: " + sentence + "\n")
-	
-	#splits a sentence into tokens (punctuation, words, $ symbols, numbers, floats) eg $3.55 becomes $, 3.55
-    tokens = nltk.word_tokenize(sentence)
-
-	#prints the tokens (str() returns a printable representation of an object)
-    print("Sentence Tokens: " + str(tokens))
-
-	#tag a sequence of words 
-    tagged = nltk.pos_tag(tokens)
-
-	#print tags
-    print("\nTagged:")
-    for word in tagged:
-        print("\t" + str(word))
-	
-    entities = nltk.chunk.ne_chunk(tagged)
-    print("Entities:")
-    print(entities)
-
-    # Lexical Parser
-    parser = CoreNLPParser(url='http://localhost:9000')
-    # Parse raw string.
-    parsedList = list(parser.raw_parse(sentence))
-    print(parsedList[0])
-    # Prints a parse tree from an already parsed sentence
-    parsetree = Tree.fromstring(str(parsedList[0]))
-    #print parsetree
-    parsetree.pretty_print()
-	
+	#print sentence
+    print("<QUESTION> " + sentence)
 	
     # NER Tagger
     ner_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='ner')
@@ -77,21 +49,26 @@ for sentence in testSentence:
     ner_list = []
     for ner_word in ner_tags:
 	    ner_list.append(ner_word[1])
-    print(ner_list)	
     counter = Counter(ner_list)
     #prints most common word
     categories = counter.most_common(2)
-    print(categories) 
 	#we don't care about the 'O' category 
     if categories[0][0] == 'O': 
-	    print("Category: " + categories[1][0])
+	    print("<CATEGORY> " + categories[1][0])
     else:
-	    print("Category: " + categories[0][0])
+	    print("<CATEGORY> " + categories[0][0])
 
+    # Lexical Parser
+    parser = CoreNLPParser(url='http://localhost:9000')
+    # Parse raw string.
+    parsedList = list(parser.raw_parse(sentence))
+    #print(parsedList[0]) #prints parse tree in non pretty form 
+    # makes a parse tree from an already parsed sentence
+    parsetree = Tree.fromstring(str(parsedList[0]))
+    #print parsetree
+    print("<PARSETREE>")
+    parsetree.pretty_print()
 	
-    # nltk.help.upenn_tagset("PRP$")
-    # nltk.help.upenn_tagset("NN")
-    # nltk.help.upenn_tagset("VBZ")
-    # nltk.help.upenn_tagset("NNP")
+    print("\n")
 
 	
