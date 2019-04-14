@@ -4,6 +4,7 @@ import os
 from nltk.parse import stanford
 nltk.download('tagsets')
 from nltk.parse import CoreNLPParser
+from collections import Counter
 
 # Single sentences for testing
 testSentence = ["Is the Pacific deeper than the Atlantic?"]
@@ -36,6 +37,8 @@ sentences1_2 = ["Is Rome the capital of Italy?",
 
 for sentence in testSentence:
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
+    print("Sentence: " + sentence + "\n")
+	
 	#splits a sentence into tokens (punctuation, words, $ symbols, numbers, floats) eg $3.55 becomes $, 3.55
     tokens = nltk.word_tokenize(sentence)
 
@@ -49,31 +52,11 @@ for sentence in testSentence:
     print("\nTagged:")
     for word in tagged:
         print("\t" + str(word))
-    print("\n")
-
 	
     entities = nltk.chunk.ne_chunk(tagged)
     print("Entities:")
     print(entities)
 
-	#from the stanford parser
-    testEntities = "(ROOT (SQ (VBZ Is) (NP (DT the) (NNP Pacific)) (NP (NP (JJR deeper)) (PP (IN than) (NP (DT the) (NNP Atlantic)))) (. ?)))"
-	#[Tree('ROOT', [Tree('SBARQ', [Tree('WHNP', [Tree('WP', ['What'])]), Tree('SQ', [Tree('VBZ', ['is']), Tree('NP', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['airspeed'])]), Tree('PP', [Tree('IN', ['of']), Tree('NP', [Tree('DT', ['an']), Tree('JJ', ['unladen'])])]), Tree('S', [Tree('VP', [Tree('VB', ['swallow'])])])])]), Tree('.', ['?'])])])]
-
-
-    # Prints a parse tree from an already parsed sentence
-    parsetree = Tree.fromstring(str(testEntities))
-    #print parsetree
-    parsetree.pretty_print()
-
-    print("\n\n")
-	
-    
-    grammar = ('''
-    NP: {<DT>?<JJ>*<NN>} # NP
-    ''')
-
-	#this bit does the same thing as above basically but actually parses the sentence with the stanford parser 
     # Lexical Parser
     parser = CoreNLPParser(url='http://localhost:9000')
     # Parse raw string.
@@ -83,6 +66,27 @@ for sentence in testSentence:
     parsetree = Tree.fromstring(str(parsedList[0]))
     #print parsetree
     parsetree.pretty_print()
+	
+	
+    # NER Tagger
+    ner_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='ner')
+    ner_tags = list(ner_tagger.tag((sentence.split())))
+    #print(ner_tags) #prints all word/category tuples
+    #print(ner_tags[0]) #prints word/category tuple 
+    #print(ner_tags[0][1]) #prints category
+    ner_list = []
+    for ner_word in ner_tags:
+	    ner_list.append(ner_word[1])
+    print(ner_list)	
+    counter = Counter(ner_list)
+    #prints most common word
+    categories = counter.most_common(2)
+    print(categories) 
+	#we don't care about the 'O' category 
+    if categories[0][0] == 'O': 
+	    print("Category: " + categories[1][0])
+    else:
+	    print("Category: " + categories[0][0])
 
 	
     # nltk.help.upenn_tagset("PRP$")
