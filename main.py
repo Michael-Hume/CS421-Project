@@ -1,6 +1,9 @@
 import nltk
 from nltk.tree import *
+import os
+from nltk.parse import stanford
 nltk.download('tagsets')
+from nltk.parse import CoreNLPParser
 
 # Single sentences for testing
 testSentence = ["Is the Pacific deeper than the Atlantic?"]
@@ -33,22 +36,30 @@ sentences1_2 = ["Is Rome the capital of Italy?",
 
 for sentence in testSentence:
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
+	#splits a sentence into tokens (punctuation, words, $ symbols, numbers, floats) eg $3.55 becomes $, 3.55
     tokens = nltk.word_tokenize(sentence)
 
+	#prints the tokens (str() returns a printable representation of an object)
     print("Sentence Tokens: " + str(tokens))
 
+	#tag a sequence of words 
     tagged = nltk.pos_tag(tokens)
 
+	#print tags
     print("\nTagged:")
     for word in tagged:
         print("\t" + str(word))
     print("\n")
 
+	
     entities = nltk.chunk.ne_chunk(tagged)
     print("Entities:")
     print(entities)
 
+	#from the stanford parser
     testEntities = "(ROOT (SQ (VBZ Is) (NP (DT the) (NNP Pacific)) (NP (NP (JJR deeper)) (PP (IN than) (NP (DT the) (NNP Atlantic)))) (. ?)))"
+	#[Tree('ROOT', [Tree('SBARQ', [Tree('WHNP', [Tree('WP', ['What'])]), Tree('SQ', [Tree('VBZ', ['is']), Tree('NP', [Tree('NP', [Tree('DT', ['the']), Tree('NN', ['airspeed'])]), Tree('PP', [Tree('IN', ['of']), Tree('NP', [Tree('DT', ['an']), Tree('JJ', ['unladen'])])]), Tree('S', [Tree('VP', [Tree('VB', ['swallow'])])])])]), Tree('.', ['?'])])])]
+
 
     # Prints a parse tree from an already parsed sentence
     parsetree = Tree.fromstring(str(testEntities))
@@ -56,15 +67,27 @@ for sentence in testSentence:
     parsetree.pretty_print()
 
     print("\n\n")
-
+	
+    
     grammar = ('''
     NP: {<DT>?<JJ>*<NN>} # NP
     ''')
 
+	#this bit does the same thing as above basically but actually parses the sentence with the stanford parser 
+    # Lexical Parser
+    parser = CoreNLPParser(url='http://localhost:9000')
+    # Parse raw string.
+    parsedList = list(parser.raw_parse(sentence))
+    print(parsedList[0])
+    # Prints a parse tree from an already parsed sentence
+    parsetree = Tree.fromstring(str(parsedList[0]))
+    #print parsetree
+    parsetree.pretty_print()
 
-
+	
     # nltk.help.upenn_tagset("PRP$")
     # nltk.help.upenn_tagset("NN")
     # nltk.help.upenn_tagset("VBZ")
     # nltk.help.upenn_tagset("NNP")
 
+	
