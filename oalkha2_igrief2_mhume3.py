@@ -146,7 +146,7 @@ for sentence in sentences:
     #print(parsedList[0]) #prints parse tree in non pretty form 
     # makes a parse tree from an already parsed sentence
     parsetree = Tree.fromstring(str(parsedList[0]))
-    #print parsetree
+    #print(parsetree)
     print("<PARSETREE>")
     parsetree.pretty_print()
 	
