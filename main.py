@@ -68,7 +68,7 @@ for sentence in sentences:
     #lists of key words to match similarities and categorize 
     geography = ['geography', 'Antarctic', 'places', 'location', 'locations', 'area', 'areas', 'America', 'Europe', 'Australia', 'Asia', 'Pacific', 'Italy', 'place', 'state', 'country', 'continent', 'world', 'ocean', 'oceans', 'river', 'rivers', 'mountain', 'mountains', 'desert', 'deserts', 'city', 'cities', 'town', 'towns', 'capital', 'village', 'villager', 'land', 'Atlantic', 'Indian', 'India', 'sea', 'seas']
     music = ['music', 'song', 'songs', 'notes', 'sing', 'instrument', 'album', 'artist', 'singer', 'player', 'concert', 'jazz', 'pop', 'vocalist', 'band', 'bands', 'rock', 'piano', 'guitar', 'trumpet', 'musicians', 'musician', 'blues', 'metal', 'classical']
-    movies = ['movies', 'cinema', 'cinematic', 'movie', 'theater', 'theatre', 'actor', 'actress', 'show', 'showing', 'watch', 'watched', 'watching', 'view', 'see', 'screen', 'acted', 'directed', 'director', 'film', 'filmography', 'cinematography', 'video']
+    movies = ['movies', 'cinema', 'cinematic', 'movie', 'theater', 'theatre', 'actor', 'actress', 'show', 'showing', 'watch', 'watched', 'watching', 'view', 'see', 'screen', 'acted', 'directed', 'director', 'film', 'cinematography','video']
     #s = wn.synsets('dog')
     #t = wn.synsets('geography')
 	#print(s[0].lemma_names())#gives the actual word 
@@ -137,9 +137,9 @@ for sentence in sentences:
     elif max(totals) == totals[2]:
         category = 'movies'
     print("<CATEGORY " + category)
-    print("geog: " + str(totals[0]))
-    print("music: " + str(totals[1]))
-    print("movies: " + str(totals[2]))
+    #print("geog: " + str(totals[0]))
+    #print("music: " + str(totals[1]))
+    #print("movies: " + str(totals[2]))
 	
     # Parse raw string.
     parsedList = list(parser.raw_parse(sentence))
