@@ -63,7 +63,7 @@ for sentence in sentences:
     parser = CoreNLPParser(url='http://localhost:9000')
     # Tokenizer
     tokens = list(parser.tokenize(sentence))
-    print(tokens)
+    #print(tokens)
 	
     #lists of key words to match similarities and categorize 
     geography = ['geography', 'Antarctic', 'places', 'location', 'locations', 'area', 'areas', 'America', 'Europe', 'Australia', 'Asia', 'Pacific', 'Italy', 'place', 'state', 'country', 'continent', 'world', 'ocean', 'oceans', 'river', 'rivers', 'mountain', 'mountains', 'desert', 'deserts', 'city', 'cities', 'town', 'towns', 'capital', 'village', 'villager', 'land', 'Atlantic', 'Indian', 'India', 'sea', 'seas']
