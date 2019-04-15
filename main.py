@@ -5,7 +5,10 @@ from nltk.parse import stanford
 nltk.download('tagsets')
 from nltk.parse import CoreNLPParser
 from collections import Counter
-
+import sys
+from nltk.corpus import wordnet as wn
+import re
+'''
 # Single sentences for testing
 testSentence = ["Is the Pacific deeper than the Atlantic?"]
 
@@ -35,31 +38,109 @@ sentences1_2 = ["Is Rome the capital of Italy?",
              "Does the album Thriller include the track BeatIt?",
              "Was Beyonce' born in the USA?"]
 
-for sentence in testSentence:
+'''
+
+#get the file specified in argument
+filepath = sys.argv[1]
+
+#check if filepath is valid 
+if not os.path.isfile(filepath):
+   print("File path {} does not exist.".format(filepath))
+   sys.exit()
+
+#open file and put each line into a list
+with open(filepath, 'r') as inputFile:
+    sentences = inputFile.readlines()
+
+	
+#testsentence = ['dog']
+#do the actual thing 
+for sentence in sentences:
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
 	#print sentence
     print("<QUESTION> " + sentence)
-	
-    # NER Tagger
-    ner_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='ner')
-    ner_tags = list(ner_tagger.tag((sentence.split())))
-    #print(ner_tags) #prints all word/category tuples
-    #print(ner_tags[0]) #prints word/category tuple 
-    #print(ner_tags[0][1]) #prints category
-    ner_list = []
-    for ner_word in ner_tags:
-	    ner_list.append(ner_word[1])
-    counter = Counter(ner_list)
-    #prints most common word
-    categories = counter.most_common(2)
-	#we don't care about the 'O' category 
-    if categories[0][0] == 'O': 
-	    print("<CATEGORY> " + categories[1][0])
-    else:
-	    print("<CATEGORY> " + categories[0][0])
-
     # Lexical Parser
     parser = CoreNLPParser(url='http://localhost:9000')
+    # Tokenizer
+    tokens = list(parser.tokenize(sentence))
+    print(tokens)
+	
+    #lists of key words to match similarities and categorize 
+    geography = ['geography', 'Antarctic', 'places', 'location', 'locations', 'area', 'areas', 'America', 'Europe', 'Australia', 'Asia', 'Pacific', 'Italy', 'place', 'state', 'country', 'continent', 'world', 'ocean', 'oceans', 'river', 'rivers', 'mountain', 'mountains', 'desert', 'deserts', 'city', 'cities', 'town', 'towns', 'capital', 'village', 'villager', 'land', 'Atlantic', 'Indian', 'India', 'sea', 'seas']
+    music = ['music', 'song', 'songs', 'notes', 'sing', 'instrument', 'album', 'artist', 'singer', 'player', 'concert', 'jazz', 'pop', 'vocalist', 'band', 'bands', 'rock', 'piano', 'guitar', 'trumpet', 'musicians', 'musician', 'blues', 'metal', 'classical']
+    movies = ['movies', 'cinema', 'cinematic', 'movie', 'theater', 'theatre', 'actor', 'actress', 'show', 'showing', 'watch', 'watched', 'watching', 'view', 'see', 'screen', 'acted', 'directed', 'director', 'film', 'filmography', 'cinematography', 'video']
+    #s = wn.synsets('dog')
+    #t = wn.synsets('geography')
+	#print(s[0].lemma_names())#gives the actual word 
+    #print(s[0].name()) #prints the lemma.pos.number syntax 
+    #print(wn.synsets('dog')[0].wup_similarity(wn.synsets('cat')[0])) #this is all you need to do to get similarity between two words 
+    #for every word in the sentence, compare the first synset to the synsets of everything in the category lists
+    #print(wn.synsets('dog')[0].wup_similarity(wn.synsets('cat')[0])) #this is all you need to do to get wu palmer similarity between two words 
+    totals = [0.0, 0.0, 0.0]
+    firstX = 15 #get the first X elements of each list of similarities - so that the size of the lists doesn't matter 
+    firstX = min(firstX, len(geography), len(music), len(movies)) #make sure each category is equal for the average
+    for token in tokens[:-1]: #exclude the question mark token - this assumes that there is a question mark token 
+        geogList = []
+        for ge in geography:
+            var = 0
+            tokSyn = wn.synsets(token)
+            if len(tokSyn) != 0:
+                var = tokSyn[0].wup_similarity(wn.synsets(ge)[0])
+            if var is not None:
+                geogList.append(var)
+        #geogList.sort()
+        geogList = sorted(geogList, reverse=True)
+        firstXSim = 0
+        for simVal in geogList[:firstX]:
+            firstXSim += simVal
+        totals[0] += (firstXSim/firstX) #add the average of the first X geography similarities
+		
+        musicList = []
+        for mu in music:
+            var = 0
+            tokSyn = wn.synsets(token)
+            if len(tokSyn) != 0:
+                var = tokSyn[0].wup_similarity(wn.synsets(mu)[0])
+            if var is not None:
+                musicList.append(var)
+        musicList = sorted(musicList, reverse=True)
+        #musicList.sort()
+        firstXSim = 0
+        for simVal in musicList[:firstX]:
+            firstXSim += simVal        
+        totals[1] += (firstXSim/firstX) #add average of the first X music similarities
+		
+        moviesList = []
+        for mo in movies:
+            var = 0
+            tokSyn = wn.synsets(token)
+            if len(tokSyn) != 0:
+                var = tokSyn[0].wup_similarity(wn.synsets(mo)[0])
+            if var is not None:
+                moviesList.append(var)
+        #moviesList.sort()
+        moviesList = sorted(moviesList, reverse=True)
+        firstXSim = 0
+        for simVal in moviesList[:firstX]:
+            firstXSim += simVal        
+        totals[2] += (firstXSim/firstX) #add average of the first X movies similarities
+		
+
+    #average the totals, the max average is the category 
+    for t in totals:
+        t /= (len(tokens)-1)
+
+    if max(totals) == totals[0]:
+        category = 'geography'
+    elif max(totals) == totals[1]:
+        category = 'music'
+    elif max(totals) == totals[2]:
+        category = 'movies'
+    print("<CATEGORY " + category)
+    print("geog: " + str(totals[0]))
+    print("music: " + str(totals[1]))
+    print("movies: " + str(totals[2]))
+	
     # Parse raw string.
     parsedList = list(parser.raw_parse(sentence))
     #print(parsedList[0]) #prints parse tree in non pretty form 
