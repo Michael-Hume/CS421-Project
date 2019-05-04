@@ -9,9 +9,10 @@ Isaiah Grief / igrief2
 Michael Hume / mhume3
 
 We chose to use the CoreNLP parser interfacing with NLTK in Python. 
-It seemed that the CoreNLP parser was more robust and parsed sentences in a way that made displaying the parse trees easy.
-The NER tagger also seemed advantageous, although we did not end up using it. 
-
+It seemed that the CoreNLP parser was robust and parsed sentences in a way that made displaying the parse trees easy using NLTK.
+The NER tagger also seemed advantageous for the categorization task, although we did not end up using it. 
+For the categorization task we used WordNet. 
+The Wu-Palmer algorithm was used to calculate similarity between words.
 
 How to run:
 Have Stanford CoreNLP service up and running at http://localhost:9000 

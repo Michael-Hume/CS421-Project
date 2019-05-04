@@ -1,3 +1,10 @@
+#Omar Al-Khatib / oalkha2
+#Isaiah Grief / igrief2
+#Michael Hume / mhume3
+#CS421 Spring 2019
+#University of Illinois at Chicago
+#Project Part 1
+
 import nltk
 from nltk.tree import *
 import os
@@ -8,37 +15,8 @@ from collections import Counter
 import sys
 from nltk.corpus import wordnet as wn
 import re
-'''
-# Single sentences for testing
-testSentence = ["Is the Pacific deeper than the Atlantic?"]
-
-# Sentences required for Part 3
-p3_sentences = ["Is the Pacific deeper than the Atlantic?",
-             "Did Swank win the oscar in 2000?",
-             "Is the Shining by Kubrik?",
-             "Does the album Thriller include the track BeatIt?",
-             "Who directed Hugo?",
-             "Which is the scary movie by Kubrik with Nicholson?",
-             "In which continent does Canada lie?",
-             "With which countries does France have a border?,"
-             " Where was Gaga born?",
-             "In which album does Aura appear?",
-             "Which album by Swift was released in 2014?"]
-
-#Sentences from Part 1.2
-sentences1_2 = ["Is Rome the capital of Italy?",
-             "Is France in Europe?",
-             "Is the Pacific deeper than the Atlantic?",
-             "Did Neeson star in Schindler's List?",
-             "Did Swank win the oscar in 2000?",
-             "Is the Shining by Kubrik?",
-             "Did a French actor win the oscar in 2012?",
-             "Did a movie by Spielberg with Neeson win the oscar for best film?",
-             "Did Madonna sing PapaDoNotPreach?",
-             "Does the album Thriller include the track BeatIt?",
-             "Was Beyonce' born in the USA?"]
-
-'''
+from nltk.stem import WordNetLemmatizer
+import sqlite3
 
 #get the file specified in argument
 filepath = sys.argv[1]
@@ -53,9 +31,9 @@ with open(filepath, 'r') as inputFile:
     sentences = inputFile.readlines()
 
 	
-#testsentence = ['dog']
+testsentences = ['dog cat']
 #do the actual thing 
-for sentence in sentences:
+for sentence in testsentences: 
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
 	#print sentence
     print("<QUESTION> " + sentence)
@@ -128,7 +106,7 @@ for sentence in sentences:
 
     #average the totals, the max average is the category 
     for t in totals:
-        t /= (len(tokens)-1)
+        t /= (len(tokens)-1) #assumes at least length 1 else there is a division by 0 error 
 
     if max(totals) == totals[0]:
         category = 'geography'
@@ -146,10 +124,52 @@ for sentence in sentences:
     #print(parsedList[0]) #prints parse tree in non pretty form 
     # makes a parse tree from an already parsed sentence
     parsetree = Tree.fromstring(str(parsedList[0]))
-    #print(parsetree)
     print("<PARSETREE>")
+    print(parsetree)
     parsetree.pretty_print()
 	
     print("\n")
 
-	
+	#lemmas?
+    lemmatizer = WordNetLemmatizer()
+    print("rocks: ", lemmatizer.lemmatize("rocks")) #default is noun 
+    print("big: ", lemmatizer.lemmatize("big", pos = "a")) #a for adjective
+    print("was: ", lemmatizer.lemmatize("was", pos = "v")) #i hope v for verb 
+    print("is: ", lemmatizer.lemmatize("is", pos = "v")) #i hope v for verb 
+    print("are: ", lemmatizer.lemmatize("are", pos = "v")) #i hope v for verb 
+    print("were: ", lemmatizer.lemmatize("were", pos = "v")) #i hope v for verb 
+    #was, is, are, all of that stuff is 'be' 
+    #so with this you could feasibly take the 'be' words and that might help you with the query for non wh- questions
+
+    # POS Tagger
+    pos_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='pos')
+    pos_tags = list(pos_tagger.tag(sentence.split()))
+    print(pos_tags)
+    print(pos_tags[0][1])
+    #i dont think pos tags are going to be too useful 
+    
+    # NER Tagger
+    ner_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='ner')
+    ner_tags = list(ner_tagger.tag((sentence.split())))
+    #print(ner_tags) #prints all word/category tuples
+    #print(ner_tags[0]) #prints word/category tuple 
+    #print(ner_tags[0][1]) #prints category
+    ner_list = []
+    for ner_word in ner_tags:
+	    ner_list.append(ner_word[1])
+    #this is code from previous iteration of categorization, NER tagging was suggested to be helpful, and it certainly can help us determine 'PEOPLE' 
+            
+
+conn = sqlite3.connect('oscar-movie_imdb.sqlite')
+print("Opened database successfully")
+cursor = conn.execute("Select Count(*) FROM Oscar O INNER JOIN Person P ON person_id = P.id WHERE P.name LIKE '%Bigelow%' AND O.type='BEST-DIRECTOR'")
+for row in cursor:
+    print(row[0])
+conn.close()
+
+
+
+
+            
+            
+    
