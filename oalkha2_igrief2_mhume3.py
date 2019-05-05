@@ -30,10 +30,20 @@ if not os.path.isfile(filepath):
 with open(filepath, 'r') as inputFile:
     sentences = inputFile.readlines()
 
-	
+
+def CountryContinent(): #is <country> in <continent> #WHERE Countries.Name = " + country + " and Continents.Continent = " + continent  
+    return "Countries INNER JOIN CountryContinents ON Countries.Id = CountryContinents.CountryID INNER JOIN Continents ON CountryContinents.ContinentID = Continents.Id "
+
+def CapitalsCountries(): #what is the capital of <country> #SELECT Cities.Name / WHERE Countries.Name = <country> #where is <city>  #SELECT Countries.Name / WHERE Cities.Name = <city> 
+    return "Capitals INNER JOIN Cities ON Cities.Id = Capitals.CityID INNER JOIN Countries ON Countries.Id = Capitals.CountryID "
+
+    
+    	
+    
 testsentences = ['Did Allen direct MightyAphrodite?', 'Did Allen direct Mighty Aphrodite?', 'Did a French actor win the oscar in 2012?']
+testsentences2 = ['Is Rome the capital of Italy?', 'Is Madrid the capital of Germany?']
 #do the actual thing 
-for sentence in testsentences: 
+for sentence in testsentences2: 
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
 	#print sentence
     print("<QUESTION> " + sentence)
@@ -52,19 +62,24 @@ for sentence in testsentences:
     #print(pos_tags[0][1])
     
     #reduce the pos list by combining adjacent NNPs and ignoring possessives - and also gets rid of question mark at end by not appending it 
-    previous = pos_tags[0]
+    previous = ('','')
     reducedList = []
-    for i in range(1, len(pos_tags)):
+    for i in range(0, len(pos_tags)):
         #look for adjacent NNP, NNPS, and POS tags 
+        if previous[1] == '': #beginning or after pos 
+            previous = pos_tags[i]
         if pos_tags[i][1] == 'NNP' or pos_tags[i][1] == 'NNPS': #concat the words with a space 
             if previous[1] == 'NNP' or previous[1] == 'NNPS':
                 previous = (previous[0] + ' ' + pos_tags[i][0], 'NNP')
             else:
                 reducedList.append(previous)
                 previous = (pos_tags[i])
-        elif pos_tags[i][1] != 'POS': #if its POS, we ignore it, otherwise just continue on 
+        else:
             reducedList.append(previous)
-            previous = (pos_tags[i])
+            if pos_tags[i][1] != 'POS': #if its POS, we ignore it, otherwise just continue on 
+                previous = (pos_tags[i])
+            else:
+                previous = ('','')
     print("reduced:")
     print(reducedList) 
 	#lemmas?
@@ -142,15 +157,30 @@ for sentence in testsentences:
     for t in totals:
         t /= (len(tokens)-1) #assumes at least length 1 else there is a division by 0 error 
 
+    #get a list of the proper nouns in the sentence (from the reduced list) 
+    properNounList = []
+    for x in reducedList:
+        if x[1] == 'NNP' or x[1] == 'NNPS':
+            properNounList.append(x[0])
+            
+    query = ""
     if max(totals) == totals[0]: #GEOGRAPHY 
-    
-        
-        category = 'geography'
+        if questiontype == 'be' or questiontype == 'do': #yes/no questions 
+            query += "SELECT COUNT(*) FROM "
+            for x in reducedList:
+                if x[0] == 'capital':
+                    query += CapitalsCountries() 
+                    query += "WHERE Cities.Name = " + properNounList[0] + " and Countries.Name = " + properNounList[1]                    
+        print(query)
     elif max(totals) == totals[1]: #MUSIC 
-        category = 'music'
+        if questiontype == 'be' or questiontype == 'do': #yes/no questions 
+            query += "SELECT COUNT(*) FROM "
     elif max(totals) == totals[2]: #MOVIES 
-        category = 'movies'
-    print("<CATEGORY " + category)
+        if questiontype == 'be' or questiontype == 'do': #yes/no questions 
+            query += "SELECT COUNT(*) FROM "
+            
+            
+    #print("<CATEGORY " + category)
     #print("geog: " + str(totals[0]))
     #print("music: " + str(totals[1]))
     #print("movies: " + str(totals[2]))
@@ -187,9 +217,3 @@ for row in cursor:
     print(row[0])
 conn.close()
 
-
-
-
-            
-            
-    
