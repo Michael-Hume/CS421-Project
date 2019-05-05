@@ -31,17 +31,17 @@ with open(filepath, 'r') as inputFile:
     sentences = inputFile.readlines()
 
 
-def CountryContinent(): #is <country> in <continent> #WHERE Countries.Name = " + country + " and Continents.Continent = " + continent  
+def CountryContinent():  
     return "Countries INNER JOIN CountryContinents ON Countries.Id = CountryContinents.CountryID INNER JOIN Continents ON CountryContinents.ContinentID = Continents.Id "
 
-def CapitalsCountries(): #what is the capital of <country> #SELECT Cities.Name / WHERE Countries.Name = <country> #where is <city>  #SELECT Countries.Name / WHERE Cities.Name = <city> 
+def CapitalsCountries():
     return "Capitals INNER JOIN Cities ON Cities.Id = Capitals.CityID INNER JOIN Countries ON Countries.Id = Capitals.CountryID "
 
     
     	
     
 testsentences = ['Did Allen direct MightyAphrodite?', 'Did Allen direct Mighty Aphrodite?', 'Did a French actor win the oscar in 2012?']
-testsentences2 = ['Is Rome the capital of Italy?', 'Is Madrid the capital of Germany?']
+testsentences2 = ['Is Rome the capital of Italy?', 'Is Madrid in Germany?', 'What is the capital of France?', 'Where is London?']
 #do the actual thing 
 for sentence in testsentences2: 
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
@@ -164,13 +164,65 @@ for sentence in testsentences2:
             properNounList.append(x[0])
             
     query = ""
+    
+    queryDone = False
+    posConcat = ""
+    for x in reducedList: #get a concatenated list of pos tags to match patterns 
+        posConcat += x[1] + " "
     if max(totals) == totals[0]: #GEOGRAPHY 
         if questiontype == 'be' or questiontype == 'do': #yes/no questions 
             query += "SELECT COUNT(*) FROM "
             for x in reducedList:
                 if x[0] == 'capital':
                     query += CapitalsCountries() 
-                    query += "WHERE Cities.Name = " + properNounList[0] + " and Countries.Name = " + properNounList[1]                    
+                    query += "WHERE Cities.Name = " + "'" + properNounList[0] + "'" + " and Countries.Name = " + "'" + properNounList[1] + "'"
+                    queryDone = True 
+                    break
+            if not queryDone: 
+                if "NNP IN NNP" in posConcat:
+                    query += CountryContinent()
+                    query += "WHERE Countries.Name = " + "'" + properNounList[0] + "'" + " and Continents.Continent = " + "'" + properNounList[1] + "'" 
+                    queryDone = True
+            if queryDone:
+                conn = sqlite3.connect('WorldGeography.sqlite')
+                print(query)
+                cursor = conn.execute(query)
+                row = cursor.fetchone() #for count(*) this should be the only one 
+                if row[0] >= 1:
+                    print("Yes")
+                else:
+                    print("No")
+                conn.close()
+            else: 
+                print("I don't know")
+        else: #WH questions 
+            if questiontype == 'what':
+                query += "SELECT Cities.Name FROM "
+                for x in reducedList:
+                    if x[0] == 'capital':
+                        query += CapitalsCountries() 
+                        query += "WHERE Countries.Name = " + "'" + properNounList[0] + "'"
+                        queryDone = True 
+                        break
+            elif questiontype == 'where':
+                query += "SELECT Countries.Name FROM "
+                if "WRB VBZ NNP" in posConcat: #format for this question 
+                    query += CapitalsCountries()
+                    query += "WHERE Cities.Name = " + "'" + properNounList[0] + "'"
+                    queryDone = True 
+            if queryDone:
+                conn = sqlite3.connect('WorldGeography.sqlite')
+                print(query)
+                cursor = conn.execute(query)
+                row = cursor.fetchone()
+                if row == None:
+                    print("I don't know")
+                else:
+                    print(row[0])
+                conn.close()
+            else: 
+                print("I don't know")
+            
         print(query)
     elif max(totals) == totals[1]: #MUSIC 
         if questiontype == 'be' or questiontype == 'do': #yes/no questions 
