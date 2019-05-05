@@ -31,7 +31,7 @@ with open(filepath, 'r') as inputFile:
     sentences = inputFile.readlines()
 
 	
-testsentences = ['dog cat']
+testsentences = ['Did Allen direct MightyAphrodite?', 'Did Allen direct Mighty Aphrodite?', 'Did a French actor win the oscar in 2012?']
 #do the actual thing 
 for sentence in testsentences: 
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
@@ -42,6 +42,40 @@ for sentence in testsentences:
     # Tokenizer
     tokens = list(parser.tokenize(sentence))
     #print(tokens)
+    
+    
+    
+    # POS Tagger
+    pos_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='pos')
+    pos_tags = list(pos_tagger.tag(sentence.split()))
+    print(pos_tags)
+    #print(pos_tags[0][1])
+    
+    #reduce the pos list by combining adjacent NNPs and ignoring possessives - and also gets rid of question mark at end by not appending it 
+    previous = pos_tags[0]
+    reducedList = []
+    for i in range(1, len(pos_tags)):
+        #look for adjacent NNP, NNPS, and POS tags 
+        if pos_tags[i][1] == 'NNP' or pos_tags[i][1] == 'NNPS': #concat the words with a space 
+            if previous[1] == 'NNP' or previous[1] == 'NNPS':
+                previous = (previous[0] + ' ' + pos_tags[i][0], 'NNP')
+            else:
+                reducedList.append(previous)
+                previous = (pos_tags[i])
+        elif pos_tags[i][1] != 'POS': #if its POS, we ignore it, otherwise just continue on 
+            reducedList.append(previous)
+            previous = (pos_tags[i])
+    print("reduced:")
+    print(reducedList) 
+	#lemmas?
+    lemmatizer = WordNetLemmatizer()
+    #print("rocks: ", lemmatizer.lemmatize("rocks")) #default is noun 
+    #print("big: ", lemmatizer.lemmatize("big", pos = "a")) #a for adjective, v for verb 
+    questiontype = lemmatizer.lemmatize(reducedList[0][0].lower(), pos = "v") #'be' or 'do' for yes/no, anything else we can say is some kind of WH question 
+    print("question type:")
+    print(questiontype)
+    
+    
 	
     #lists of key words to match similarities and categorize 
     geography = ['geography', 'Antarctic', 'places', 'location', 'locations', 'area', 'areas', 'America', 'Europe', 'Australia', 'Asia', 'Pacific', 'Italy', 'place', 'state', 'country', 'continent', 'world', 'ocean', 'oceans', 'river', 'rivers', 'mountain', 'mountains', 'desert', 'deserts', 'city', 'cities', 'town', 'towns', 'capital', 'village', 'villager', 'land', 'Atlantic', 'Indian', 'India', 'sea', 'seas']
@@ -108,11 +142,13 @@ for sentence in testsentences:
     for t in totals:
         t /= (len(tokens)-1) #assumes at least length 1 else there is a division by 0 error 
 
-    if max(totals) == totals[0]:
+    if max(totals) == totals[0]: #GEOGRAPHY 
+    
+        
         category = 'geography'
-    elif max(totals) == totals[1]:
+    elif max(totals) == totals[1]: #MUSIC 
         category = 'music'
-    elif max(totals) == totals[2]:
+    elif max(totals) == totals[2]: #MOVIES 
         category = 'movies'
     print("<CATEGORY " + category)
     #print("geog: " + str(totals[0]))
@@ -121,44 +157,28 @@ for sentence in testsentences:
 	
     # Parse raw string.
     parsedList = list(parser.raw_parse(sentence))
+    #print(parsedList[0][0][1][0][0][0][0]) #root, child, children - so in most cases the first 2 only have 1
+        #i have no idea how to traverse the tree in a way that is helpful though 
+            #especially since you need to have as many brackets as levels you are traversing 
     #print(parsedList[0]) #prints parse tree in non pretty form 
     # makes a parse tree from an already parsed sentence
     parsetree = Tree.fromstring(str(parsedList[0]))
+    
+    #attempt to traverse the tree, doesn't really work as well as I wanted it to 
+    #def traverse_tree(tree):
+    #    print("tree:", tree)
+    #    for subtree in tree:
+    #        if type(subtree) == nltk.tree.Tree:
+    #            traverse_tree(subtree)
+    #traverse_tree(parsetree)
+    
     print("<PARSETREE>")
     print(parsetree)
     parsetree.pretty_print()
 	
     print("\n")
 
-	#lemmas?
-    lemmatizer = WordNetLemmatizer()
-    print("rocks: ", lemmatizer.lemmatize("rocks")) #default is noun 
-    print("big: ", lemmatizer.lemmatize("big", pos = "a")) #a for adjective
-    print("was: ", lemmatizer.lemmatize("was", pos = "v")) #i hope v for verb 
-    print("is: ", lemmatizer.lemmatize("is", pos = "v")) #i hope v for verb 
-    print("are: ", lemmatizer.lemmatize("are", pos = "v")) #i hope v for verb 
-    print("were: ", lemmatizer.lemmatize("were", pos = "v")) #i hope v for verb 
-    #was, is, are, all of that stuff is 'be' 
-    #so with this you could feasibly take the 'be' words and that might help you with the query for non wh- questions
-
-    # POS Tagger
-    pos_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='pos')
-    pos_tags = list(pos_tagger.tag(sentence.split()))
-    print(pos_tags)
-    print(pos_tags[0][1])
-    #i dont think pos tags are going to be too useful 
     
-    # NER Tagger
-    ner_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='ner')
-    ner_tags = list(ner_tagger.tag((sentence.split())))
-    #print(ner_tags) #prints all word/category tuples
-    #print(ner_tags[0]) #prints word/category tuple 
-    #print(ner_tags[0][1]) #prints category
-    ner_list = []
-    for ner_word in ner_tags:
-	    ner_list.append(ner_word[1])
-    #this is code from previous iteration of categorization, NER tagging was suggested to be helpful, and it certainly can help us determine 'PEOPLE' 
-            
 
 conn = sqlite3.connect('oscar-movie_imdb.sqlite')
 print("Opened database successfully")
