@@ -341,19 +341,23 @@ for sentence in sentences:
             QueryYesNo(query, 'oscar-movie_imdb.sqlite', queryDone)
         else: #WH- QUESTIONS
             if questiontype == 'when': #we only have movie year and oscar year so its one of those 
-                if len(oscarType) > 0: 
+                if len(oscarType) > 0: #we'll be getting oscar year 
                     query += "SELECT Oscar.year FROM "
-                    
-                else: 
+                    if 'act' in sentence: #person oscar 
+                        query += OscarPerson()
+                    else: #movie oscar
+                        query += OscarMovie()
+                    queryDone = True
+                else: #get movie year from whatever its from 
                     query += "SELECT Movie.year FROM "
+                    query += Movie()
+                    queryDone = True 
             elif questiontype == 'what':
                 x = 5
             elif questiontype == 'who':
                 query += "SELECT Person.name FROM "
                 if len(oscarType) > 0: #its a person oscar question 
                     query += OscarPerson()
-                    if oscarType != 'generic':
-                        query = AddWhere(query, "Oscar.type = " + oscarType)
                     queryDone = True
             elif questiontype == 'which':
                 if 'act' in sentence: 
@@ -362,12 +366,14 @@ for sentence in sentences:
                         query += OscarPerson()
                     else: 
                         query += Movie()
+                    queryDone = True
                 else:
                     query += "SELECT Movie.name FROM "
                     if len(oscarType) > 0: #movie oscar
                         query += OscarMovie() 
                     else:
                         query += Movie()
+                    queryDone = True
             if year > 0: #add a where clause for time -either movie or oscar 
                 if len(oscarType) > 0:
                     query = AddWhere(query, "Oscar.year = " + str(year))
@@ -375,6 +381,9 @@ for sentence in sentences:
                     query = AddWhere(query, "Movie.year = " + str(year))
             if nationality:
                 query = AddWhere(query, "Person.pob LIKE " + "'%" + properNounList[len(properNounList)-1] + "%'")
+            if len(oscarType) > 0: #if it was an oscar question, add the where clause 
+                if oscarType != 'generic':
+                    query = AddWhere(query, "Oscar.type = " + oscarType)
             QueryWH(query, 'oscar-movie_imdb.sqlite', queryDone)
             
     #print("<CATEGORY " + category)
