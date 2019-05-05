@@ -3,7 +3,7 @@
 #Michael Hume / mhume3
 #CS421 Spring 2019
 #University of Illinois at Chicago
-#Project Part 1
+#Project Part 2
 
 import nltk
 from nltk.tree import *
@@ -87,6 +87,11 @@ def QueryWH(query, database, queryDone):
     else: 
         print("I don't know")
         
+def AddWhere(query, addition):
+    if 'WHERE' in query: #dont repeat wheres, just add with ANDS
+        return query + " AND " + addition
+    else:
+        return query + " WHERE " + addition
 testsentences = ['Did Allen direct MightyAphrodite?', 'Did Allen direct Mighty Aphrodite?', 'Did a French actor win the oscar in 2012?']
 testsentences2 = ['Is Rome the capital of Italy?', 'Is Madrid in Germany?', 'What is the capital of France?', 'Where is London?']
 testsentences3 = ["Was Birdman the best movie in 2015?", "Did Swank win the oscar in 2000?", "Did Neeson star in Schindler's List?", "Is Mighty Aphrodite by Allen?"] 
@@ -274,19 +279,25 @@ for sentence in sentences:
         year = 0
         oscar = False
         oscarType = ""
+        nationality = False
         #look at 'best' and check the next word against the list of things 
         #make sure adj italian and german and american and all that are converted to NNPs in list 
         for x in reducedList:
             if x[0] == 'American':
                 properNounList.append('USA')
+                nationality = True
             elif x[0] == 'Italian':
                 properNounList.append('Italy')
+                nationality = True
             elif x[0] == 'British':
                 properNounList.append('UK')
+                nationality = True
             elif x[0] == 'German':
                 properNounList.append('Germany')
+                nationality = True
             elif x[0] == 'French':
                 properNounList.append('France')
+                nationality = True
             elif x[0] == 'best':
                 oscar = True
             elif x[0] == 'oscar':
@@ -322,12 +333,48 @@ for sentence in sentences:
                         queryDone = True
             if year > 0: #add a where clause for time -either movie or oscar 
                 if len(oscarType) > 0:
-                    query += " AND Oscar.year = " + str(year)
+                    query = AddWhere(query, "Oscar.year = " + str(year))
                 else:
-                    query += " AND Movie.year = " + str(year)
+                    query = AddWhere(query, "Movie.year = " + str(year))
+            if nationality:
+                query = AddWhere(query, "Person.pob LIKE " + "'%" + properNounList[len(properNounList)-1] + "%'")
             QueryYesNo(query, 'oscar-movie_imdb.sqlite', queryDone)
         else: #WH- QUESTIONS
-        
+            if questiontype == 'when': #we only have movie year and oscar year so its one of those 
+                if len(oscarType) > 0: 
+                    query += "SELECT Oscar.year FROM "
+                    
+                else: 
+                    query += "SELECT Movie.year FROM "
+            elif questiontype == 'what':
+                x = 5
+            elif questiontype == 'who':
+                query += "SELECT Person.name FROM "
+                if len(oscarType) > 0: #its a person oscar question 
+                    query += OscarPerson()
+                    if oscarType != 'generic':
+                        query = AddWhere(query, "Oscar.type = " + oscarType)
+                    queryDone = True
+            elif questiontype == 'which':
+                if 'act' in sentence: 
+                    query += "SELECT Person.name FROM " 
+                    if len(oscarType) > 0: #person oscar
+                        query += OscarPerson()
+                    else: 
+                        query += Movie()
+                else:
+                    query += "SELECT Movie.name FROM "
+                    if len(oscarType) > 0: #movie oscar
+                        query += OscarMovie() 
+                    else:
+                        query += Movie()
+            if year > 0: #add a where clause for time -either movie or oscar 
+                if len(oscarType) > 0:
+                    query = AddWhere(query, "Oscar.year = " + str(year))
+                else:
+                    query = AddWhere(query, "Movie.year = " + str(year))
+            if nationality:
+                query = AddWhere(query, "Person.pob LIKE " + "'%" + properNounList[len(properNounList)-1] + "%'")
             QueryWH(query, 'oscar-movie_imdb.sqlite', queryDone)
             
     #print("<CATEGORY " + category)
