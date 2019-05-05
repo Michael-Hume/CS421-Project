@@ -37,13 +37,61 @@ def CountryContinent():
 def CapitalsCountries():
     return "Capitals INNER JOIN Cities ON Cities.Id = Capitals.CityID INNER JOIN Countries ON Countries.Id = Capitals.CountryID "
 
+def ArtistTrack(): 
+    return "Artist INNER JOIN Album ON Artist.id = Album.artsitID INNER JOIN Track ON Track.albumID = Album.albumID "
+
+def Movie():
+    return "Director JOIN Person ON Director.director_id = Person.id INNER JOIN Movie ON Movie.id = Director.movie_id INNER JOIN Actor ON Actor.movie_id = Movie.id "
+
+def MovieBorn():
+    return "Person "
     
-    	
+def OscarMovie():
+    return "Director JOIN Person ON Director.director_id = Person.id INNER JOIN Movie ON Movie.id = Director.movie_id INNER JOIN Actor ON Actor.movie_id = Movie.id INNER JOIN Oscar ON Oscar.movie_id = Movie.id "
+
+def OscarPerson():
+    return "Director JOIN Person ON Director.director_id = Person.id INNER JOIN Movie ON Movie.id = Director.movie_id INNER JOIN Actor ON Actor.movie_id = Movie.id INNER JOIN Oscar ON Oscar.person_id = Person.id "
     
+def QueryYesNo(query, database, queryDone):
+    #print("yes no")
+    print('<QUERY>')
+    print(query)
+    print('<ANSWER>')
+    if queryDone:
+        conn = sqlite3.connect(database)
+        cursor = conn.execute(query)
+        row = cursor.fetchone() #for count(*) this should be the only one 
+       #print(row[0])
+        if row[0] >= 1:
+            print("Yes")
+        else:
+            print("No")
+        conn.close()
+    else: 
+        print("I don't know")
+        
+def QueryWH(query, database, queryDone):
+    #print("wh")
+    print('<QUERY>')
+    print(query)
+    print('<ANSWER>')
+    if queryDone:
+        conn = sqlite3.connect(database)
+        cursor = conn.execute(query)
+        row = cursor.fetchone()
+        if row == None:
+            print("I don't know")
+        else:
+            print(row[0])
+        conn.close()
+    else: 
+        print("I don't know")
+        
 testsentences = ['Did Allen direct MightyAphrodite?', 'Did Allen direct Mighty Aphrodite?', 'Did a French actor win the oscar in 2012?']
 testsentences2 = ['Is Rome the capital of Italy?', 'Is Madrid in Germany?', 'What is the capital of France?', 'Where is London?']
+testsentences3 = ["Was Birdman the best movie in 2015?", "Did Swank win the oscar in 2000?", "Did Neeson star in Schindler's List?", "Is Mighty Aphrodite by Allen?"] 
 #do the actual thing 
-for sentence in testsentences2: 
+for sentence in sentences: 
     print("*   *   *   *   *   *   *   *   *   *   *   *   ")
 	#print sentence
     print("<QUESTION> " + sentence)
@@ -58,7 +106,7 @@ for sentence in testsentences2:
     # POS Tagger
     pos_tagger = CoreNLPParser(url='http://localhost:9000', tagtype='pos')
     pos_tags = list(pos_tagger.tag(sentence.split()))
-    print(pos_tags)
+    #print(pos_tags)
     #print(pos_tags[0][1])
     
     #reduce the pos list by combining adjacent NNPs and ignoring possessives - and also gets rid of question mark at end by not appending it 
@@ -80,15 +128,15 @@ for sentence in testsentences2:
                 previous = (pos_tags[i])
             else:
                 previous = ('','')
-    print("reduced:")
-    print(reducedList) 
+    #print("reduced:")
+    #print(reducedList) 
 	#lemmas?
     lemmatizer = WordNetLemmatizer()
     #print("rocks: ", lemmatizer.lemmatize("rocks")) #default is noun 
     #print("big: ", lemmatizer.lemmatize("big", pos = "a")) #a for adjective, v for verb 
     questiontype = lemmatizer.lemmatize(reducedList[0][0].lower(), pos = "v") #'be' or 'do' for yes/no, anything else we can say is some kind of WH question 
-    print("question type:")
-    print(questiontype)
+    #print("question type:")
+    #print(questiontype)
     
     
 	
@@ -157,6 +205,18 @@ for sentence in testsentences2:
     for t in totals:
         t /= (len(tokens)-1) #assumes at least length 1 else there is a division by 0 error 
 
+    if max(totals) == totals[0]:
+        category = 'geography'
+    elif max(totals) == totals[1]:
+        category = 'music'
+    else:
+        category = 'movies'
+        
+    #overriding categorization so that we can actual answer most of the movies questions: 
+    for x in reducedList:
+        if x[0] == 'actor' or x[0] == 'actress' or x[0] == 'oscar' or x[0] == 'directed' or x[0] == 'movie':
+            category = 'movies'
+    
     #get a list of the proper nouns in the sentence (from the reduced list) 
     properNounList = []
     for x in reducedList:
@@ -169,7 +229,8 @@ for sentence in testsentences2:
     posConcat = ""
     for x in reducedList: #get a concatenated list of pos tags to match patterns 
         posConcat += x[1] + " "
-    if max(totals) == totals[0]: #GEOGRAPHY 
+    if category == 'geography': #GEOGRAPHY 
+        print("THIS IS GEOGRAPHY")
         if questiontype == 'be' or questiontype == 'do': #yes/no questions 
             query += "SELECT COUNT(*) FROM "
             for x in reducedList:
@@ -183,18 +244,7 @@ for sentence in testsentences2:
                     query += CountryContinent()
                     query += "WHERE Countries.Name = " + "'" + properNounList[0] + "'" + " and Continents.Continent = " + "'" + properNounList[1] + "'" 
                     queryDone = True
-            if queryDone:
-                conn = sqlite3.connect('WorldGeography.sqlite')
-                print(query)
-                cursor = conn.execute(query)
-                row = cursor.fetchone() #for count(*) this should be the only one 
-                if row[0] >= 1:
-                    print("Yes")
-                else:
-                    print("No")
-                conn.close()
-            else: 
-                print("I don't know")
+            QueryYesNo(query, 'WorldGeography.sqlite', queryDone)
         else: #WH questions 
             if questiontype == 'what':
                 query += "SELECT Cities.Name FROM "
@@ -210,27 +260,75 @@ for sentence in testsentences2:
                     query += CapitalsCountries()
                     query += "WHERE Cities.Name = " + "'" + properNounList[0] + "'"
                     queryDone = True 
-            if queryDone:
-                conn = sqlite3.connect('WorldGeography.sqlite')
-                print(query)
-                cursor = conn.execute(query)
-                row = cursor.fetchone()
-                if row == None:
-                    print("I don't know")
+            QueryWH(query, 'WorldGeography.sqlite', queryDone)
+    elif category == 'music': #MUSIC 
+        print("THIS IS MUSIC")
+        if questiontype == 'be' or questiontype == 'do': #yes/no questions 
+            query += "SELECT COUNT(*) FROM "
+            
+            QueryYesNo(query, 'music.sqlite', queryDone)
+        else: #WH- QUESTIONS
+            QueryWH(query, 'music.sqlite', queryDone)
+    elif category == 'movies': #MOVIES
+        print("THIS IS MOVIES")
+        year = 0
+        oscar = False
+        oscarType = ""
+        #look at 'best' and check the next word against the list of things 
+        #make sure adj italian and german and american and all that are converted to NNPs in list 
+        for x in reducedList:
+            if x[0] == 'American':
+                properNounList.append('USA')
+            elif x[0] == 'Italian':
+                properNounList.append('Italy')
+            elif x[0] == 'British':
+                properNounList.append('UK')
+            elif x[0] == 'German':
+                properNounList.append('Germany')
+            elif x[0] == 'French':
+                properNounList.append('France')
+            elif x[0] == 'best':
+                oscar = True
+            elif x[0] == 'oscar':
+                oscarType = 'generic'
+            elif x[1] == 'CD':
+                year = int(x[0],10)
+            elif oscar: #best was the previous word, so its probably talking about an oscar
+                if x[0] == 'actress':
+                    oscarType = 'BEST-ACTRESS'
+                elif x[0] == 'actor':
+                    oscarType = 'BEST-ACTOR'
+                elif x[0] == 'movie' or x[0] == 'film':
+                    oscarType = 'BEST-PICTURE'
+            oscar = False
+            
+        if questiontype == 'be' or questiontype == 'do': #yes/no questions 
+            query += "SELECT COUNT(*) FROM "
+            if len(oscarType) > 0: #its some oscar question, lets query both OscarMovie and OscarPerson since we don't have NER tag to tell us if its a person 
+                query += OscarMovie() #or OscarPerson()
+                query += "WHERE Movie.name LIKE " + "'%" + properNounList[0] + "%'"
+                if oscarType != 'generic':
+                    query += " AND Oscar.type = " + oscarType
+                queryDone = True
+            elif 'NNP IN NNP' in posConcat or 'VB IN NNP' in posConcat: #probably an actor in a movie 
+                query += Movie()
+                query += "WHERE Person.name LIKE " + "'%" + properNounList[0] + "%'" + "AND Movie.name LIKE " + "'%" + properNounList[1] + "%'"
+                queryDone = True
+            else: #look for keywords 
+                for x in reducedList:
+                    if x[0] == 'director':
+                        query += Movie() 
+                        query += "WHERE Director.name LIKE " + "'%" + properNounList[0] + "%'"
+                        queryDone = True
+            if year > 0: #add a where clause for time -either movie or oscar 
+                if len(oscarType) > 0:
+                    query += " AND Oscar.year = " + str(year)
                 else:
-                    print(row[0])
-                conn.close()
-            else: 
-                print("I don't know")
-            
-        print(query)
-    elif max(totals) == totals[1]: #MUSIC 
-        if questiontype == 'be' or questiontype == 'do': #yes/no questions 
-            query += "SELECT COUNT(*) FROM "
-    elif max(totals) == totals[2]: #MOVIES 
-        if questiontype == 'be' or questiontype == 'do': #yes/no questions 
-            query += "SELECT COUNT(*) FROM "
-            
+                    query += " AND Movie.year = " + str(year)
+            QueryYesNo(query, 'oscar-movie_imdb.sqlite', queryDone)
+        else: #WH- QUESTIONS
+        
+            QueryWH(query, 'oscar-movie_imdb.sqlite', queryDone)
             
     #print("<CATEGORY " + category)
     #print("geog: " + str(totals[0]))
@@ -254,11 +352,11 @@ for sentence in testsentences2:
     #            traverse_tree(subtree)
     #traverse_tree(parsetree)
     
-    print("<PARSETREE>")
-    print(parsetree)
-    parsetree.pretty_print()
+    #print("<PARSETREE>")
+    #print(parsetree)
+    #parsetree.pretty_print()
 	
-    print("\n")
+    #print("\n")
 
     
 
