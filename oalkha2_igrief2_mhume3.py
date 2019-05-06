@@ -39,18 +39,22 @@ def CapitalsCountries():
 
 def ArtistTrack(): 
     return "Artist INNER JOIN Album ON Artist.id = Album.artsitID INNER JOIN Track ON Track.albumID = Album.albumID "
-
-def Movie():
-    return "Director JOIN Person ON Director.director_id = Person.id INNER JOIN Movie ON Movie.id = Director.movie_id INNER JOIN Actor ON Actor.movie_id = Movie.id "
-
+    
 def MovieBorn():
     return "Person "
     
+def Movie():
+    return "Movie "
+    
 def OscarMovie():
-    return "Director JOIN Person ON Director.director_id = Person.id INNER JOIN Movie ON Movie.id = Director.movie_id INNER JOIN Actor ON Actor.movie_id = Movie.id INNER JOIN Oscar ON Oscar.movie_id = Movie.id "
+    return "Movie INNER JOIN Oscar ON Movie.id = Oscar.movie_id "
 
-def OscarPerson():
-    return "Director JOIN Person ON Director.director_id = Person.id INNER JOIN Movie ON Movie.id = Director.movie_id INNER JOIN Actor ON Actor.movie_id = Movie.id INNER JOIN Oscar ON Oscar.person_id = Person.id "
+def JoinMovieDirector(): #joins movie table with director table (and person table)
+    return "INNER JOIN Director ON Movie.id = Director.movie_id INNER JOIN Person ON Director.director_id = Person.id "
+
+def JoinMovieActor(): #joins movie table with actor table (and person table)
+    return "INNER JOIN Actor ON Movie.id = Actor.movie_id INNER JOIN Person ON Actor.actor_id = Person.id "
+
     
 def QueryYesNo(query, database, queryDone):
     #print("yes no")
@@ -92,6 +96,7 @@ def AddWhere(query, addition):
         return query + " AND " + addition
     else:
         return query + " WHERE " + addition
+        
 testsentences = ['Did Allen direct MightyAphrodite?', 'Did Allen direct Mighty Aphrodite?', 'Did a French actor win the oscar in 2012?']
 testsentences2 = ['Is Rome the capital of Italy?', 'Is Madrid in Germany?', 'What is the capital of France?', 'Where is London?']
 testsentences3 = ["Was Birdman the best movie in 2015?", "Did Swank win the oscar in 2000?", "Did Neeson star in Schindler's List?", "Is Mighty Aphrodite by Allen?"] 
@@ -300,6 +305,7 @@ for sentence in sentences:
                 nationality = True
             elif x[0] == 'best':
                 oscar = True
+                continue
             elif x[0] == 'oscar':
                 oscarType = 'generic'
             elif x[1] == 'CD':
@@ -316,20 +322,28 @@ for sentence in sentences:
         if questiontype == 'be' or questiontype == 'do': #yes/no questions 
             query += "SELECT COUNT(*) FROM "
             if len(oscarType) > 0: #its some oscar question, lets query both OscarMovie and OscarPerson since we don't have NER tag to tell us if its a person 
-                query += OscarMovie() #or OscarPerson()
-                query += "WHERE Movie.name LIKE " + "'%" + properNounList[0] + "%'"
+                query += OscarMovie() #either leave as is or its a person so its one of joinmoviedirector or joinmovieactor
+                if 'act' in sentence:
+                    query += JoinMovieActor()
+                elif 'direct' in sentence:
+                    query += JoinMovieDirector()
+                else:
+                    query = AddWhere(query,"Movie.name LIKE " + "'%" + properNounList[0] + "%'")
                 if oscarType != 'generic':
-                    query += " AND Oscar.type = " + oscarType
+                    query = AddWhere(query, "Oscar.type = " + "'" + oscarType + "'")
                 queryDone = True
             elif 'NNP IN NNP' in posConcat or 'VB IN NNP' in posConcat: #probably an actor in a movie 
                 query += Movie()
-                query += "WHERE Person.name LIKE " + "'%" + properNounList[0] + "%'" + "AND Movie.name LIKE " + "'%" + properNounList[1] + "%'"
+                query += JoinMovieActor()
+                query = AddWhere(query, "Person.name LIKE " + "'%" + properNounList[0] + "%'")
+                query = AddWhere(query, "Movie.name LIKE " + "'%" + properNounList[1] + "%'")
                 queryDone = True
             else: #look for keywords 
                 for x in reducedList:
                     if x[0] == 'director':
                         query += Movie() 
-                        query += "WHERE Director.name LIKE " + "'%" + properNounList[0] + "%'"
+                        query += JoinMovieDirector()
+                        query = AddWhere(query, "Director.name LIKE " + "'%" + properNounList[0] + "%'")
                         queryDone = True
             if year > 0: #add a where clause for time -either movie or oscar 
                 if len(oscarType) > 0:
@@ -344,7 +358,8 @@ for sentence in sentences:
                 if len(oscarType) > 0: #we'll be getting oscar year 
                     query += "SELECT Oscar.year FROM "
                     if 'act' in sentence: #person oscar 
-                        query += OscarPerson()
+                        query += OscarMovie()
+                        query += JoinMovieActor()
                     else: #movie oscar
                         query += OscarMovie()
                     queryDone = True
@@ -357,13 +372,21 @@ for sentence in sentences:
             elif questiontype == 'who':
                 query += "SELECT Person.name FROM "
                 if len(oscarType) > 0: #its a person oscar question 
-                    query += OscarPerson()
+                    query += OscarMovie() #join either director or actor 
+                    if 'act' in sentence: 
+                        query += JoinMovieActor()
+                    else:
+                        query += JoinMovieDirector()
                     queryDone = True
             elif questiontype == 'which':
                 if 'act' in sentence: 
                     query += "SELECT Person.name FROM " 
                     if len(oscarType) > 0: #person oscar
-                        query += OscarPerson()
+                        query += OscarMovie() #join either director or actor 
+                        if 'act' in sentence: 
+                            query += JoinMovieActor()
+                        else:
+                            query += JoinMovieDirector()
                     else: 
                         query += Movie()
                     queryDone = True
@@ -382,8 +405,10 @@ for sentence in sentences:
             if nationality:
                 query = AddWhere(query, "Person.pob LIKE " + "'%" + properNounList[len(properNounList)-1] + "%'")
             if len(oscarType) > 0: #if it was an oscar question, add the where clause 
+                print("oscar type: ")
+                print(oscarType)
                 if oscarType != 'generic':
-                    query = AddWhere(query, "Oscar.type = " + oscarType)
+                    query = AddWhere(query, "Oscar.type = " + "'" + oscarType + "'")
             QueryWH(query, 'oscar-movie_imdb.sqlite', queryDone)
             
     #print("<CATEGORY " + category)
@@ -413,13 +438,3 @@ for sentence in sentences:
     #parsetree.pretty_print()
 	
     #print("\n")
-
-    
-
-conn = sqlite3.connect('oscar-movie_imdb.sqlite')
-print("Opened database successfully")
-cursor = conn.execute("Select Count(*) FROM Oscar O INNER JOIN Person P ON person_id = P.id WHERE P.name LIKE '%Bigelow%' AND O.type='BEST-DIRECTOR'")
-for row in cursor:
-    print(row[0])
-conn.close()
-
