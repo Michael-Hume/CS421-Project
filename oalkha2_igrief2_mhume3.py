@@ -97,6 +97,22 @@ def AddWhere(query, addition):
     else:
         return query + " WHERE " + addition
         
+        
+def grammarList(grammar, parent):
+    child = ""
+    isLeaf = False
+    for node in parent:
+        if not isinstance(node, str):
+            child += node.label() + " "
+            grammar = grammarList(grammar, node)
+        else:
+            child += node
+            isLeaf = True
+    if not isLeaf:
+        child = child[:-1]
+    grammar.append((parent.label(), child))
+    return grammar
+        
 testsentences = ['Did Allen direct MightyAphrodite?', 'Did Allen direct Mighty Aphrodite?', 'Did a French actor win the oscar in 2012?']
 testsentences2 = ['Is Rome the capital of Italy?', 'Is Madrid in Germany?', 'What is the capital of France?', 'Where is London?']
 testsentences3 = ["Was Birdman the best movie in 2015?", "Did Swank win the oscar in 2000?", "Did Neeson star in Schindler's List?", "Is Mighty Aphrodite by Allen?"] 
@@ -436,6 +452,15 @@ for sentence in sentences:
 	
     # Parse raw string.
     parsedList = list(parser.raw_parse(sentence))
+    parsetree = Tree.fromstring(str(parsedList[0]))
+    #print(parsedList[0])
+    grammar = []
+    grammar = grammarList(grammar, parsetree)
+    #print(grammar)
+    
+    
+        
+
     #print(parsedList[0][0][1][0][0][0][0]) #root, child, children - so in most cases the first 2 only have 1
         #i have no idea how to traverse the tree in a way that is helpful though 
             #especially since you need to have as many brackets as levels you are traversing 
