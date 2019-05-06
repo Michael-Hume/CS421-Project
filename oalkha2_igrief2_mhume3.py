@@ -222,10 +222,12 @@ for sentence in sentences:
     else:
         category = 'movies'
         
-    #overriding categorization so that we can actual answer most of the movies questions: 
+    #overriding categorization so that we can actually answer most of the movies questions: 
     for x in reducedList:
         if x[0] == 'actor' or x[0] == 'actress' or x[0] == 'oscar' or x[0] == 'directed' or x[0] == 'movie':
             category = 'movies'
+        elif x[0] == 'album':
+            category = 'music'
     
     #get a list of the proper nouns in the sentence (from the reduced list) 
     properNounList = []
@@ -240,7 +242,7 @@ for sentence in sentences:
     for x in reducedList: #get a concatenated list of pos tags to match patterns 
         posConcat += x[1] + " "
     if category == 'geography': #GEOGRAPHY 
-        print("THIS IS GEOGRAPHY")
+       # print("THIS IS GEOGRAPHY")
         if questiontype == 'be' or questiontype == 'do': #yes/no questions 
             query += "SELECT COUNT(*) FROM "
             for x in reducedList:
@@ -272,15 +274,28 @@ for sentence in sentences:
                     queryDone = True 
             QueryWH(query, 'WorldGeography.sqlite', queryDone)
     elif category == 'music': #MUSIC 
-        print("THIS IS MUSIC")
+       # print("THIS IS MUSIC")
         if questiontype == 'be' or questiontype == 'do': #yes/no questions 
             query += "SELECT COUNT(*) FROM "
-            
+            query += ArtistTrack()
+            if(len(properNounList) >= 2):
+                query = AddWhere(query, "Artist.name LIKE " + "'%" + properNounList[0] + "%'")
+                query = AddWhere(query, "Track.name LIKE " + "'%" + properNounList[1] + "%'")
+            queryDone = True
             QueryYesNo(query, 'music.sqlite', queryDone)
         else: #WH- QUESTIONS
+            if questiontype == 'who': #probably asking about a song 
+                query += "SELECT Artist.name FROM "
+                query += ArtistTrack()
+                query = AddWhere(query, "Album.name LIKE " + "'%" + properNounList[0] + "%'")
+            if questiontype == 'when':
+                query += "SELECT Album.releaseDate FROM "
+                query += ArtistTrack()
+                query = AddWhere(query, "Album.name LIKE " + "'%" + properNounList[0] + "%'")
+                queryDone = True
             QueryWH(query, 'music.sqlite', queryDone)
     elif category == 'movies': #MOVIES
-        print("THIS IS MOVIES")
+       # print("THIS IS MOVIES")
         year = 0
         oscar = False
         oscarType = ""
@@ -367,8 +382,6 @@ for sentence in sentences:
                     query += "SELECT Movie.year FROM "
                     query += Movie()
                     queryDone = True 
-            elif questiontype == 'what':
-                x = 5
             elif questiontype == 'who':
                 query += "SELECT Person.name FROM "
                 if len(oscarType) > 0: #its a person oscar question 
@@ -377,6 +390,11 @@ for sentence in sentences:
                         query += JoinMovieActor()
                     else:
                         query += JoinMovieDirector()
+                    queryDone = True
+                elif 'direct' in sentence:
+                    query += Movie()
+                    query += JoinMovieDirector()
+                    query = AddWhere(query, "Movie.name LIKE " + "'%" + properNounList[0] + "%'")
                     queryDone = True
             elif questiontype == 'which':
                 if 'act' in sentence: 
@@ -405,8 +423,8 @@ for sentence in sentences:
             if nationality:
                 query = AddWhere(query, "Person.pob LIKE " + "'%" + properNounList[len(properNounList)-1] + "%'")
             if len(oscarType) > 0: #if it was an oscar question, add the where clause 
-                print("oscar type: ")
-                print(oscarType)
+                #print("oscar type: ")
+                #print(oscarType)
                 if oscarType != 'generic':
                     query = AddWhere(query, "Oscar.type = " + "'" + oscarType + "'")
             QueryWH(query, 'oscar-movie_imdb.sqlite', queryDone)
